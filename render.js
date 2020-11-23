@@ -57,8 +57,9 @@ scene.add(cubeMesh);
 (async () => {
   const res = await fetch('./output.json');
   const j = await res.json();
-  console.log('got j', j);
-  const {indices, normals, uvs, vertices, tangents} = j;
+  const meshComponent = j.find(c => c.type === 'mesh');
+  console.log('got j', {j, meshComponent});
+  const {indices, normals, uvs, vertices, tangents} = meshComponent.geometry;
 
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(Float32Array.from(vertices), 3));
