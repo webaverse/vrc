@@ -183,81 +183,83 @@ const _parseMesh = o => {
   };
 };
 
-const avatar = scene.find(o => o.m_Name === 'Avator_voxelkei');
-const components = avatar.m_Component.map(c => {
-  const {fileID} = c.component;
-  const component = scene.find(o => o.fileID === fileID);
-  // console.log('find file', fileID, component);
-  const {type} = component;
-  switch (type) {
-    case 'Transform': {
-      // console.log('got transform', component);
-      const {m_LocalPosition, m_LocalRotation, m_LocalScale} = component;
+scene = scene.map(o => {
+  const name = o.m_Name;
+  const components = o.m_Component.map(c => {
+    const {fileID} = c.component;
+    const component = scene.find(o => o.fileID === fileID);
+    // console.log('find file', fileID, component);
+    const {type} = component;
+    switch (type) {
+      case 'Transform': {
+        // console.log('got transform', component);
+        const {m_LocalPosition, m_LocalRotation, m_LocalScale} = component;
 
-      const position = [m_LocalPosition.x, m_LocalPosition.true, m_LocalPosition.z];
-      const quaternion = [m_LocalRotation.x, m_LocalRotation.true, m_LocalRotation.z, m_LocalRotation.w];
-      const scale = [m_LocalScale.x, m_LocalScale.true, m_LocalScale.z];
-      return {
-        type: 'transform',
-        position,
-        quaternion,
-        scale,
-      };
-      break;
-    }
-    case 'SkinnedMeshRenderer': {
-      const {m_Mesh, m_Materials} = component;
-      const meshFilePath = fileMap[m_Mesh.guid];
-      const meshFile = YAML.parse(fs.readFileSync(meshFilePath, 'utf8'));
-      const mesh = _parseMesh(meshFile);
-      const materials = m_Materials.map(mat => {
-        const matFilePath = fileMap[mat.guid];
-        const matFile = YAML.parse(fs.readFileSync(matFilePath, 'utf8'));
-        // console.log('got mat', matFile);
-        const textures = matFile.Material.m_SavedProperties.m_TexEnvs.map(o => {
-          const k = Object.keys(o);
-          o = o[k];
-          const {m_Texture} = o;
-          if (m_Texture.guid) {
-            const textureFilePath = fileMap[m_Texture.guid];
-            return textureFilePath;
-          } else {
-            return null;
-          }
-        }).filter(mat => mat !== null);
-        return textures;
-      });
-      // console.log('got mat', JSON.stringify(materials, null, 2));
-      // m_Mesh.fileID
-      /* m_Mesh: {
-        fileID: 4300000,
-        guid: 'f496d0e3752a95b3443d084ce449ae6f',
-        type: 2
-      } */
-      /* m_Materials: [
-        {
-          fileID: 2100000,
-          guid: '137d5d2e7d273eb2471a663eaec44006',
+        const position = [m_LocalPosition.x, m_LocalPosition.true, m_LocalPosition.z];
+        const quaternion = [m_LocalRotation.x, m_LocalRotation.true, m_LocalRotation.z, m_LocalRotation.w];
+        const scale = [m_LocalScale.x, m_LocalScale.true, m_LocalScale.z];
+        return {
+          type: 'transform',
+          position,
+          quaternion,
+          scale,
+        };
+        break;
+      }
+      case 'SkinnedMeshRenderer': {
+        const {m_Mesh, m_Materials} = component;
+        const meshFilePath = fileMap[m_Mesh.guid];
+        const meshFile = YAML.parse(fs.readFileSync(meshFilePath, 'utf8'));
+        const mesh = _parseMesh(meshFile);
+        const materials = m_Materials.map(mat => {
+          const matFilePath = fileMap[mat.guid];
+          const matFile = YAML.parse(fs.readFileSync(matFilePath, 'utf8'));
+          // console.log('got mat', matFile);
+          const textures = matFile.Material.m_SavedProperties.m_TexEnvs.map(o => {
+            const k = Object.keys(o);
+            o = o[k];
+            const {m_Texture} = o;
+            if (m_Texture.guid) {
+              const textureFilePath = fileMap[m_Texture.guid];
+              return textureFilePath;
+            } else {
+              return null;
+            }
+          }).filter(mat => mat !== null);
+          return textures;
+        });
+        // console.log('got mat', JSON.stringify(materials, null, 2));
+        // m_Mesh.fileID
+        /* m_Mesh: {
+          fileID: 4300000,
+          guid: 'f496d0e3752a95b3443d084ce449ae6f',
           type: 2
-        }
-      ] */
-      return {
-        type: 'mesh',
-        geometry: mesh,
-        material: materials,
-      };
-      break;
+        } */
+        /* m_Materials: [
+          {
+            fileID: 2100000,
+            guid: '137d5d2e7d273eb2471a663eaec44006',
+            type: 2
+          }
+        ] */
+        return {
+          type: 'mesh',
+          geometry: mesh,
+          material: materials,
+        };
+        break;
+      }
     }
-  }
-}).filter(c => c !== null);
+  }).filter(c => c !== null);
 
+  return {
+    name,
+    components,
+  };
+});
 
-
-
-
-
-
-fs.writeFileSync('output.json', JSON.stringify(components, null, 2));
+const avatar = scene.find(o => o.m_Name === 'Avator_voxelkei');
+fs.writeFileSync('output.json', JSON.stringify(avatar, null, 2));
 
 /* console.log("Done!");
 
