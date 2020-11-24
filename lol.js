@@ -47,7 +47,7 @@ fs.writeFileSync('file-map.json', JSON.stringify(fileMap, null, 2));
 // fs.writeFileSync('temp.json', JSON.stringify(scene, null, 2));
 
 const transformCache = {};
-const transformRoots = [];
+let transformRoots = [];
 const _getTransform = c => {
   const {fileID} = c;
   let entry = transformCache[fileID];
@@ -301,8 +301,10 @@ const _collectComponents = o => {
   _recurse(o);
   return result;
 };
-const _parseComponents = cs => {
-  const result = {};
+const _parseComponents = (name, cs) => {
+  const result = {
+    name,
+  };
 
   for (const c of cs) {
     const {fileID} = c;
@@ -311,7 +313,7 @@ const _parseComponents = cs => {
     switch (type) {
       case 'Transform': {
         // console.log('got transform', component);
-        const {m_LocalPosition, m_LocalRotation, m_LocalScale} = component;
+        // const {m_LocalPosition, m_LocalRotation, m_LocalScale} = component;
         
         // console.log('got transform', component);
 
@@ -392,9 +394,9 @@ const _parseComponents = cs => {
   return result;
 };
 
-scene = scene.map(o => {
-  const name = o.m_Name;
-  if (o.type === 'GameObject') {
+scene = scene.forEach(o => {
+  // const name = o.m_Name;
+  if (o.type === 'Transform') {
     /* console.log('got components', o.m_Component.map(c => {
       const {fileID} = c.component;
       const component = scene.find(o => o.fileID === fileID);
@@ -403,27 +405,35 @@ scene = scene.map(o => {
       return type;
     })); */
 
-    const componentSpecs = _collectComponents(o);
-    const object = _parseComponents(componentSpecs);
+    const gameObjectFileID = o.m_GameObject.fileID;
+    const gameObject = scene.find(o => o.fileID === gameObjectFileID);
 
-    return {
-      name,
-      ...object,
-    };
-  } else {
-    // console.warn('unknown object', o.type);
-    return null;
+    const name = gameObject.m_Name;
+    const componentSpecs = _collectComponents(gameObject);
+    const object = _parseComponents(name, componentSpecs);
+
+    if (object.geometry && object.materials) {
+      const transformId = _getTransform(o);
+      transformCache[transformId].object = object;
+    }
   }
-})
-  .filter(o => o !== null)
-  .filter(o => o.geometry && o.materials);
+});
 
 console.log('scene output', Object.keys(meshCache));
 
-const avatars = scene.filter(o => o.name === 'Avator_voxelkei');
+const _recurse = children => {
+  for (const child of children) {
+    child.children = _recurse(child.children);
+  }
+  children = children.filter(t => t.object || t.children.length > 0);
+  return children;
+};
+transformRoots = _recurse(transformRoots);
+
+// const avatars = scene.filter(o => o.name === 'Avator_voxelkei');
 fs.writeFileSync('output.json', JSON.stringify({
   transforms: transformRoots,
-  objects: scene,
+  // objects: scene,
   meshes: meshCache,
   materials: materialCache,
 }, null, 2));
