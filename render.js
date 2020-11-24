@@ -3,6 +3,8 @@ import {OrbitControls} from './OrbitControls.js';
 // import {CSS3DRenderer} from './CSS3DRenderer.js';
 import {DDSLoader} from './DDSLoader.js';
 
+// find Assets/Texture2D/ -name *.crn | xargs crunch/bin/crunch.exe -file
+
 const canvas = document.getElementById('canvas');
 const context = canvas.getContext('webgl2', {
   antialias: true,
