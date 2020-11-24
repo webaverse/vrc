@@ -57,7 +57,16 @@ const _parseMesh = o => {
 
   // normalize
   const mesh = normalizeString(o.Mesh.m_VertexData._typelessdata);
-  const index = normalizeString(o.Mesh.m_IndexBuffer);
+  /* if (!o.Mesh.m_IndexBuffer.replace) {
+    const index = o.Mesh.m_IndexBuffer.toString(8).padStart(24, '0');
+    const indices = [];
+    for (let ii = 0; ii < index.length / 4; ++ii) {
+      indices.push(swap16(parseInt(`0x` + index.substr(ii * 4, 4))));
+    };
+    console.warn('no index buffer', [o.Mesh.m_IndexBuffer, index], indices);
+    throw 'lol';
+  } */
+  const index = normalizeString(typeof o.Mesh.m_IndexBuffer === 'string' ? o.Mesh.m_IndexBuffer : padTo4(o.Mesh.m_IndexBuffer));
   const channels = o.Mesh.m_VertexData.m_Channels;
   const numVertices = o.Mesh.m_VertexData.m_VertexCount;
   const streams = [];
@@ -87,6 +96,10 @@ const _parseMesh = o => {
     return result;
   }); */
   // console.log('got streams', streams);
+
+  function padTo4(n) {
+    return n.toString(8).padStart(24, '0');
+  }
 
   function normalizeString(str) {
     return str.replace(`\\`, "").replace(`\n`, "").replace(` `, "");
@@ -192,6 +205,23 @@ const _parseMesh = o => {
     indices,
   };
 };
+const _parseMaterial = m => {
+  const matFilePath = fileMap[m.guid];
+  const matFile = YAML.parse(fs.readFileSync(matFilePath, 'utf8'));
+  console.log('got material', matFile);
+  const textures = matFile.Material.m_SavedProperties.m_TexEnvs.map(o => {
+    const k = Object.keys(o);
+    o = o[k];
+    const {m_Texture} = o;
+    if (m_Texture.guid) {
+      const textureFilePath = fileMap[m_Texture.guid];
+      return textureFilePath || null;
+    } else {
+      return null;
+    }
+  }).filter(m => m !== null);
+  return textures;
+};
 const _collectComponents = o => {
   const result = [];
   const _recurse = o => {
@@ -213,7 +243,7 @@ const _collectComponents = o => {
   return result;
 };
 const _parseComponent = c => {
-  console.log('parse component', c);
+  // console.log('parse component', c);
   const {fileID} = c;
   const component = scene.find(o => o.fileID === fileID);
   // console.log('find file', fileID, component);
@@ -234,6 +264,8 @@ const _parseComponent = c => {
       };
     }
     case 'MeshRenderer': {
+      const {m_Materials} = component;
+      const materials = m_Materials.map(m => _parseMaterial(m));
       /* const gameObject = scene.find(o => o.fileID === component.m_GameObject.fileID);
       const components = gameObject.m_Component.map(c => {
         if (c.component.fileID !== fileID) {
@@ -242,7 +274,7 @@ const _parseComponent = c => {
           return null;
         }
       }).filter(c => c !== null); */
-      console.log('got mesh renderer', c);
+      console.log('got mesh renderer', component, materials);
       // throw 'lol';
       return null; // XXX
     }
@@ -251,23 +283,7 @@ const _parseComponent = c => {
       const meshFilePath = fileMap[m_Mesh.guid];
       const meshFile = YAML.parse(fs.readFileSync(meshFilePath, 'utf8'));
       const mesh = _parseMesh(meshFile);
-      const materials = m_Materials.map(mat => {
-        const matFilePath = fileMap[mat.guid];
-        const matFile = YAML.parse(fs.readFileSync(matFilePath, 'utf8'));
-        // console.log('got mat', matFile);
-        const textures = matFile.Material.m_SavedProperties.m_TexEnvs.map(o => {
-          const k = Object.keys(o);
-          o = o[k];
-          const {m_Texture} = o;
-          if (m_Texture.guid) {
-            const textureFilePath = fileMap[m_Texture.guid];
-            return textureFilePath;
-          } else {
-            return null;
-          }
-        }).filter(mat => mat !== null);
-        return textures;
-      });
+      const materials = m_Materials.map(mat => _parseMaterial(mat));
       // console.log('got mat', JSON.stringify(materials, null, 2));
       // m_Mesh.fileID
       /* m_Mesh: {
@@ -289,7 +305,7 @@ const _parseComponent = c => {
       };
     }
     case 'MeshFilter': {
-      const {m_Mesh} = component;
+      const {m_Mesh, m_Materials} = component;
       const meshFilePath = fileMap[m_Mesh.guid];
       /* const gameObject = scene.find(o => o.fileID === component.m_GameObject.fileID);
       const components = gameObject.m_Component.map(c => {
@@ -300,12 +316,12 @@ const _parseComponent = c => {
         }
       }).filter(c => c !== null); */
       
-      console.log('got mesh filter', m_Mesh, meshFilePath);
+      // console.log('got mesh filter', m_Mesh, meshFilePath);
 
       if (meshFilePath) {
         const meshFile = YAML.parse(fs.readFileSync(meshFilePath, 'utf8'));
         const mesh = _parseMesh(meshFile);
-        // console.log('got mesh', mesh);
+        console.log('got mesh', component);
         return null; // XXX
       } else {
         return null;
