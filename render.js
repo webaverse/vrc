@@ -57,27 +57,53 @@ scene.add(cubeMesh);
 (async () => {
   const res = await fetch('./output.json');
   const j = await res.json();
-  const meshComponent = j.find(c => c.type === 'mesh');
-  console.log('got j', {j, meshComponent});
-  const {indices, normals, uvs, vertices, tangents} = meshComponent.geometry;
 
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.BufferAttribute(Float32Array.from(vertices), 3));
-  g.setAttribute('normal', new THREE.BufferAttribute(Float32Array.from(normals), 3));
-  g.setAttribute('uv', new THREE.BufferAttribute(Float32Array.from(uvs), 2));
-  g.setIndex(new THREE.BufferAttribute(Uint32Array.from(indices), 1));
-  const texture = new THREE.Texture();
-  const img = new Image();
-  img.onload = () => {
-    texture.image = img;
-  };
-  const dxt5Texture = new DDSLoader().load('./Assets/Texture2D/avator_voxelkei.dds');
-  const m = new THREE.MeshPhongMaterial({
-    // color: 0x000080,
-    map: dxt5Texture,
+  // const meshComponent = j.find(c => c.type === 'mesh');
+  // console.log('got j', {j, meshComponent});
+  // const {} = j.geometry;
+
+  const materials = Object.keys(j.materials).map(k => {
+    const {textures} = j.materials[k];
+    const texture = textures[0];
+
+    const texturePath = texture.path;
+    // const dxt5Texture = new DDSLoader().load(texturePath);
+    const m = new THREE.MeshPhongMaterial({
+      color: 0x000080,
+      // map: dxt5Texture,
+    });
+    m.materialId = k;
+    return m;
   });
-  const o = new THREE.Mesh(g, m);
-  scene.add(o);
+  const geometries = Object.keys(j.geometries).map(k => {
+    const {indices, normals, uvs, vertices, tangents} = j.geometries[k];
+
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(Float32Array.from(vertices), 3));
+    g.setAttribute('normal', new THREE.BufferAttribute(Float32Array.from(normals), 3));
+    g.setAttribute('uv', new THREE.BufferAttribute(Float32Array.from(uvs), 2));
+    g.setIndex(new THREE.BufferAttribute(Uint32Array.from(indices), 1));
+    g.geometryId = k;
+    return g;
+  });
+  const _parseTransform = t => {
+    const result = t.object ? new THREE.Mesh(
+      geometries.find(geometry => geometry.geometryId === t.object.geometry),
+      materials.find(material => material.materialId === t.object.materials[0]),
+    ) : new THREE.Object3D();
+    result.position.fromArray(t.position);
+    result.quaternion.fromArray(t.quaternion);
+    result.scale.fromArray(t.scale);
+    for (const child of t.children) {
+      const childResult = _parseTransform(child);
+      result.add(childResult);
+    }
+    return result;
+  };
+  const meshes = j.transforms.map(t => _parseTransform(t));
+  for (const mesh of meshes) {
+    scene.add(mesh);
+  }
 })();
 
 /* ImportedVertex iVertex;
