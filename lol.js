@@ -316,11 +316,11 @@ const _parseComponents = cs => {
         const meshFilePath = fileMap[m_Mesh.guid];
         const mesh2 = YAML.parse(fs.readFileSync(meshFilePath, 'utf8'));
 
-        console.log('got mat', mesh2.Mesh.m_Name, JSON.stringify(m_Materials.map(m => {
+        /* console.log('got mat', mesh2.Mesh.m_Name, JSON.stringify(m_Materials.map(m => {
           const matFilePath = fileMap[m.guid];
           const matFile = YAML.parse(fs.readFileSync(matFilePath, 'utf8'));
           return matFile;
-        }), null, 2), JSON.stringify(materials, null, 2));
+        }), null, 2), JSON.stringify(materials, null, 2)); */
         // m_Mesh.fileID
         /* m_Mesh: {
           fileID: 4300000,
@@ -351,7 +351,7 @@ const _parseComponents = cs => {
         break;
       }
       default: {
-        // console.warn('unknown component', type);
+        console.warn('unknown component', type);
         break;
       }
     }
@@ -379,9 +379,12 @@ scene = scene.map(o => {
       ...object,
     };
   } else {
+    console.warn('unknown object', o.type);
     return null;
   }
 }).filter(o => o !== null);
+
+console.log('scene output', JSON.stringify(scene.map(o => o.name), null, 2));
 
 const avatars = scene.filter(o => o.name === 'Avator_voxelkei');
 fs.writeFileSync('output.json', JSON.stringify(avatars, null, 2));
