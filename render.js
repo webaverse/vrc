@@ -120,7 +120,7 @@ const sceneScale = 10;
   window.avatars = [];
   scene.traverse(o => {
     if (o.isMesh && o !== cubeMesh) {
-      o.visible = o.name === 'Avator_voxelkei'; // window.avatars.length === 18;
+      // o.visible = window.avatars.length === 22;
       o.frustumCulled = false;
       // if (o.visible) {
         window.avatars.push(o);
