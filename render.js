@@ -53,7 +53,7 @@ const cubeMesh = new THREE.Mesh(new THREE.BoxBufferGeometry(1, 1, 1), new THREE.
   color: 0xFF0000,
   side: THREE.DoubleSide,
 }));
-cubeMesh.position.z = -3;
+cubeMesh.position.z = -1;
 scene.add(cubeMesh);
 
 const sceneScale = 10;
