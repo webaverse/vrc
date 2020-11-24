@@ -42,6 +42,10 @@ scene.add(directionalLight);
 /* const directionalLight2 = new THREE.DirectionalLight(0xFFFFFF, 1);
 scene.add(directionalLight2); */
 
+const container = new THREE.Object3D();
+container.scale.setScalar(1);
+scene.add(container);
+
 const orbitControls = new OrbitControls(camera, canvas);
 orbitControls.screenSpacePanning = true;
 orbitControls.enableMiddleZoom = false;
@@ -107,7 +111,7 @@ const sceneScale = 10;
   };
   const meshes = j.transforms.map(t => _parseTransform(t));
   for (const mesh of meshes) {
-    scene.add(mesh);
+    container.add(mesh);
   }
 })();
 
