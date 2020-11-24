@@ -113,6 +113,19 @@ const sceneScale = 10;
   for (const mesh of meshes) {
     container.add(mesh);
   }
+
+  window.scene = scene;
+  window.cubeMesh = cubeMesh;
+  window.avatars = [];
+  scene.traverse(o => {
+    if (o.isMesh && o !== cubeMesh) {
+      o.visible = o.name === 'Avator_voxelkei'; // window.avatars.length === 18;
+      o.frustumCulled = false;
+      // if (o.visible) {
+        window.avatars.push(o);
+      // }
+    }
+  });
 })();
 
 /* ImportedVertex iVertex;
