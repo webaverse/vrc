@@ -216,7 +216,7 @@ const _getMesh = guid => {
       meshCache[guid] = entry;
     }
   }
-  return entry;
+  return entry ? guid : null;
 };
 const materialCache = {};
 const _getMaterial = m => {
@@ -249,7 +249,7 @@ const _getMaterial = m => {
     };
     materialCache[m.guid] = entry;
   }
-  return entry;
+  return entry ? m.guid : null;
 };
 const _collectComponents = o => {
   const result = [];
@@ -387,7 +387,11 @@ scene = scene.map(o => {
 console.log('scene output', JSON.stringify(scene.map(o => o.name), null, 2));
 
 const avatars = scene.filter(o => o.name === 'Avator_voxelkei');
-fs.writeFileSync('output.json', JSON.stringify(avatars, null, 2));
+fs.writeFileSync('output.json', JSON.stringify({
+  objects: scene,
+  meshes: meshCache,
+  materials: materialCache,
+}, null, 2));
 
 /* console.log("Done!");
 
