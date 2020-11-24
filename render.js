@@ -51,6 +51,7 @@ orbitControls.update();
 
 const cubeMesh = new THREE.Mesh(new THREE.BoxBufferGeometry(1, 1, 1), new THREE.MeshBasicMaterial({
   color: 0xFF0000,
+  side: THREE.DoubleSide,
 }));
 cubeMesh.position.z = -3;
 scene.add(cubeMesh);
