@@ -25,7 +25,7 @@ renderer.sortObjects = false;
 
 const scene = new THREE.Scene();
 
-const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+const camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 1, 1000000);
 camera.position.set(0, 1.6, 2);
 camera.rotation.order = 'YXZ';
 // camera.quaternion.set(0, 0, 0, 1);
