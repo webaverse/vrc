@@ -46,6 +46,32 @@ fs.writeFileSync('file-map.json', JSON.stringify(fileMap, null, 2));
 
 // fs.writeFileSync('temp.json', JSON.stringify(scene, null, 2));
 
+const _getTransform = c => {
+  const {fileID} = c;
+  let entry = transformCache[fileID];
+  if (!entry) {
+    const {m_LocalPosition, m_LocalRotation, m_LocalScale, m_Father} = c;
+    
+    entry = {
+      position: [m_LocalPosition.x, m_LocalPosition.true, m_LocalPosition.z],
+      quaternion: [m_LocalRotation.x, m_LocalRotation.true, m_LocalRotation.z, m_LocalRotation.w],
+      scale: [m_LocalScale.x, m_LocalScale.true, m_LocalScale.z],
+      children: [],
+    };
+    transformCache[fileID] = entry;
+    
+    const fatherFileID = m_Father && m_Father.fileID;
+    if (fatherFileID) {
+      _getTransform(scene.find(o => o.fileID === fatherFileID));
+      const father = transformCache[fatherFileID];
+      father.children.push(entry);
+    } else {
+      transformRoots.push(entry);
+    }
+  }
+  return fileID;
+};
+
 const meshCache = {};
 const _getMesh = guid => {
   let entry = meshCache[guid];
@@ -226,7 +252,7 @@ const _getMaterial = m => {
   if (entry === undefined) {
     const matFilePath = fileMap[m.guid];
     const matFile = YAML.parse(fs.readFileSync(matFilePath, 'utf8'));
-    // console.log('got material', m, JSON.stringify(matFile, null, 2));
+    console.log('got material', JSON.stringify(matFile, null, 2));
     const textures = matFile.Material.m_SavedProperties.m_TexEnvs.map(o => {
       const k = Object.keys(o);
       o = o[k];
@@ -287,12 +313,10 @@ const _parseComponents = cs => {
         
         // console.log('got transform', component);
 
-        if (result.position) {
+        if (result.transform) {
           throw new Error('dupe');
         }
-        result.position = [m_LocalPosition.x, m_LocalPosition.true, m_LocalPosition.z];
-        result.quaternion = [m_LocalRotation.x, m_LocalRotation.true, m_LocalRotation.z, m_LocalRotation.w];
-        result.scale = [m_LocalScale.x, m_LocalScale.true, m_LocalScale.z];
+        result.transform = _getTransform(component);
         break;
       }
       case 'MeshRenderer': {
@@ -396,6 +420,7 @@ console.log('scene output', Object.keys(meshCache));
 
 const avatars = scene.filter(o => o.name === 'Avator_voxelkei');
 fs.writeFileSync('output.json', JSON.stringify({
+  transforms: transformRoots,
   objects: scene,
   meshes: meshCache,
   materials: materialCache,
