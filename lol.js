@@ -264,10 +264,10 @@ const _collectComponents = o => {
         result.push(component);
       }
 
-      if (component.m_GameObject) {
+      /* if (component.m_GameObject) {
         const gameObject = scene.find(o => o.fileID === component.m_GameObject.fileID);
         _recurse(gameObject);
-      }
+      } */
     }
   };
   _recurse(o);
@@ -284,6 +284,8 @@ const _parseComponents = cs => {
       case 'Transform': {
         // console.log('got transform', component);
         const {m_LocalPosition, m_LocalRotation, m_LocalScale} = component;
+        
+        // console.log('got transform', component);
 
         if (result.position) {
           throw new Error('dupe');
@@ -295,6 +297,7 @@ const _parseComponents = cs => {
       }
       case 'MeshRenderer': {
         const {m_Materials} = component;
+        // console.log('got materials', JSON.stringify(m_Materials, null, 2));
         const materials = m_Materials.map(m => _getMaterial(m));
         /* const gameObject = scene.find(o => o.fileID === component.m_GameObject.fileID);
         const components = gameObject.m_Component.map(c => {
@@ -312,6 +315,7 @@ const _parseComponents = cs => {
       }
       case 'SkinnedMeshRenderer': {
         const {m_Mesh, m_Materials} = component;
+        // console.log('got materials', JSON.stringify(m_Materials, null, 2));
         const mesh = _getMesh(m_Mesh.guid);
         const materials = m_Materials.map(m => _getMaterial(m));
 
@@ -384,9 +388,11 @@ scene = scene.map(o => {
     // console.warn('unknown object', o.type);
     return null;
   }
-}).filter(o => o !== null);
+})
+  .filter(o => o !== null)
+  .filter(o => o.geometry && o.materials);
 
-console.log('scene output', JSON.stringify(scene.map(o => o.name), null, 2));
+console.log('scene output', Object.keys(meshCache));
 
 const avatars = scene.filter(o => o.name === 'Avator_voxelkei');
 fs.writeFileSync('output.json', JSON.stringify({
