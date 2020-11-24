@@ -253,7 +253,7 @@ const _getMaterial = m => {
   if (entry === undefined) {
     const matFilePath = fileMap[m.guid];
     const matFile = YAML.parse(fs.readFileSync(matFilePath, 'utf8'));
-    console.log('got material', JSON.stringify(matFile, null, 2));
+    // console.log('got material', JSON.stringify(matFile, null, 2));
     const textures = matFile.Material.m_SavedProperties.m_TexEnvs.map(o => {
       const k = Object.keys(o)[0];
       o = o[k];
