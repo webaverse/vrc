@@ -54,6 +54,8 @@ const _getMesh = guid => {
     if (meshFilePath) {
       const o = YAML.parse(fs.readFileSync(meshFilePath, 'utf8'));
       
+      console.log('got mesh', o.Mesh.m_Name);
+      
       // input example: A simple Quad
 
       // field `_typelessdata`
@@ -351,7 +353,7 @@ const _parseComponents = cs => {
         break;
       }
       default: {
-        console.warn('unknown component', type);
+        // console.warn('unknown component', type);
         break;
       }
     }
@@ -379,7 +381,7 @@ scene = scene.map(o => {
       ...object,
     };
   } else {
-    console.warn('unknown object', o.type);
+    // console.warn('unknown object', o.type);
     return null;
   }
 }).filter(o => o !== null);
