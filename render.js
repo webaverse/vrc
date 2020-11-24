@@ -67,10 +67,10 @@ scene.add(cubeMesh);
     const texture = textures[0];
 
     const texturePath = texture.path;
-    // const dxt5Texture = new DDSLoader().load(texturePath);
-    const m = new THREE.MeshPhongMaterial({
-      color: 0x000080,
-      // map: dxt5Texture,
+    const dxt5Texture = new DDSLoader().load(texturePath.replace(/\.crn$/, '.dds'));
+    const m = new THREE.MeshBasicMaterial({
+      // color: 0x000080,
+      map: dxt5Texture,
     });
     m.materialId = k;
     return m;
