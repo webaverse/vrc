@@ -29,10 +29,7 @@ const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerH
 camera.position.set(0, 1.6, 2);
 camera.rotation.order = 'YXZ';
 // camera.quaternion.set(0, 0, 0, 1);
-
-const dolly = new THREE.Object3D();
-dolly.add(camera);
-scene.add(dolly);
+scene.add(camera);
 
 const ambientLight = new THREE.AmbientLight(0xFFFFFF);
 scene.add(ambientLight);
