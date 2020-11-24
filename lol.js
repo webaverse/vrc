@@ -98,6 +98,13 @@ const _parseMesh = o => {
     let mantissa = 1 + ((num & 0x7fffff) / 0x7fffff);
     return sign * mantissa * Math.pow(2, exponent);
   }
+  
+  function hex2halffloat(num) { // XXX
+    let sign = (num & 0x80000000) ? -1 : 1;
+    let exponent = ((num >> 23) & 0xff) - 127;
+    let mantissa = 1 + ((num & 0x7fffff) / 0x7fffff);
+    return sign * mantissa * Math.pow(2, exponent);
+  }
 
   function swap16(val) {
     return ((val & 0xFF) << 8) | ((val >> 8) & 0xFF);
@@ -122,16 +129,19 @@ const _parseMesh = o => {
     let slice = parseFloat(hex2float(swap32(parseInt(`0x` + mesh.substr(ii * 8, 8)))).toFixed(4));
     slices.push(slice);
   };
-  const buffers = [
-    [
-      [],
-      [],
-      [],
-    ],
-    [
-      [],
-    ],
-  ];
+  const buffers = [];
+  for (const stream of streams) {
+    const streamBuffer = [];
+    for (let i = 0; i < stream.length; i++) {
+      streamBuffer.push([]);
+    }
+    buffers.push(streamBuffer);
+  }
+  
+  /* delete o.Mesh.m_VertexData._typelessdata;
+  delete o.Mesh.m_IndexBuffer;
+  console.log('got streams', JSON.stringify(o.Mesh.m_VertexData, null, 2)); */
+  
   let offset = 0;
   for (let streamIndex = 0; streamIndex < streams.length; streamIndex++) {
     const stream = streams[streamIndex];
@@ -166,7 +176,7 @@ const _parseMesh = o => {
     tangents.push(t0, t1, t2, t3);
   }; */
 
-  const [[vertices, normals, tangents], [uvs]] = buffers;
+  const [vertices, normals, tangents, uvs] = buffers.flat();
 
   // process `m_IndexBuffer` field
   const indices = [];
@@ -182,8 +192,29 @@ const _parseMesh = o => {
     indices,
   };
 };
+const _collectComponents = o => {
+  const result = [];
+  const _recurse = o => {
+    for (let i = 0; i < o.m_Component.length; i++) {
+      const {component} = o.m_Component[i];
+      const {fileID} = component;
+      if (!result.some(o => o.fileID === fileID)) {
+        const component = scene.find(o => o.fileID === fileID);
+        result.push(component);
+      }
+
+      if (component.m_GameObject) {
+        const gameObject = scene.find(o => o.fileID === component.m_GameObject.fileID);
+        _recurse(gameObject);
+      }
+    }
+  };
+  _recurse(o);
+  return result;
+};
 const _parseComponent = c => {
-  const {fileID} = c.component;
+  console.log('parse component', c);
+  const {fileID} = c;
   const component = scene.find(o => o.fileID === fileID);
   // console.log('find file', fileID, component);
   const {type} = component;
@@ -203,17 +234,17 @@ const _parseComponent = c => {
       };
     }
     case 'MeshRenderer': {
-      const gameObject = scene.find(o => o.fileID === component.m_GameObject.fileID);
+      /* const gameObject = scene.find(o => o.fileID === component.m_GameObject.fileID);
       const components = gameObject.m_Component.map(c => {
         if (c.component.fileID !== fileID) {
           return _parseComponent(c);
         } else {
           return null;
         }
-      }).filter(c => c !== null);
-      console.log('got', component, components);
+      }).filter(c => c !== null); */
+      console.log('got mesh renderer', c);
       // throw 'lol';
-      return null;
+      return null; // XXX
     }
     case 'SkinnedMeshRenderer': {
       const {m_Mesh, m_Materials} = component;
@@ -260,10 +291,25 @@ const _parseComponent = c => {
     case 'MeshFilter': {
       const {m_Mesh} = component;
       const meshFilePath = fileMap[m_Mesh.guid];
-      const meshFile = YAML.parse(fs.readFileSync(meshFilePath, 'utf8'));
-      const mesh = _parseMesh(meshFile);
-      console.log('got mesh', mesh);
-      return null;
+      /* const gameObject = scene.find(o => o.fileID === component.m_GameObject.fileID);
+      const components = gameObject.m_Component.map(c => {
+        if (c.component.fileID !== fileID) {
+          return _parseComponent(c);
+        } else {
+          return null;
+        }
+      }).filter(c => c !== null); */
+      
+      console.log('got mesh filter', m_Mesh, meshFilePath);
+
+      if (meshFilePath) {
+        const meshFile = YAML.parse(fs.readFileSync(meshFilePath, 'utf8'));
+        const mesh = _parseMesh(meshFile);
+        // console.log('got mesh', mesh);
+        return null; // XXX
+      } else {
+        return null;
+      }
     }
     default: {
       console.warn('unknown component', type);
@@ -285,8 +331,10 @@ scene = scene.map(o => {
       const {type} = component;
       return type;
     })); */
-    
-    const components = o.m_Component.map(c => _parseComponent(c)).filter(c => c !== null);
+
+    const componentSpecs = _collectComponents(o);
+    const components = componentSpecs.map(cs => _parseComponent(cs)).filter(c => c !== null);
+    // const components = o.m_Component.map(c => _parseComponent(c)).filter(c => c !== null);
 
     return {
       name,
