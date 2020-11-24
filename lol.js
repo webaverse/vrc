@@ -174,7 +174,7 @@ const _getMesh = guid => {
           }
         }
       }
-      console.log('done', offset, slices.length);
+      // console.log('done', offset, slices.length);
       /* for (let ii = 0; ii < slices.length / 12; ++ii) {
         let offset = ii * 12;
         let v0 = slices[offset + 0];
@@ -224,19 +224,29 @@ const _getMaterial = m => {
   if (entry === undefined) {
     const matFilePath = fileMap[m.guid];
     const matFile = YAML.parse(fs.readFileSync(matFilePath, 'utf8'));
-    console.log('got material', matFile);
+    // console.log('got material', m, JSON.stringify(matFile, null, 2));
     const textures = matFile.Material.m_SavedProperties.m_TexEnvs.map(o => {
       const k = Object.keys(o);
       o = o[k];
       const {m_Texture} = o;
       if (m_Texture.guid) {
         const textureFilePath = fileMap[m_Texture.guid];
-        return textureFilePath || null;
+        if (textureFilePath) {
+          return {
+            name: k,
+            path: textureFilePath.replace(/\\/g, '/'),
+          };
+        } else {
+          return null;
+        }
       } else {
         return null;
       }
-    }).filter(m => m !== null);
-    entry = textures;
+    }).filter(t => t !== null);
+    entry = {
+      name: matFile.Material.m_Name,
+      textures,
+    };
     materialCache[m.guid] = entry;
   }
   return entry;
@@ -261,80 +271,93 @@ const _collectComponents = o => {
   _recurse(o);
   return result;
 };
-const _parseComponent = c => {
-  // console.log('parse component', c);
-  const {fileID} = c;
-  const component = scene.find(o => o.fileID === fileID);
-  // console.log('find file', fileID, component);
-  const {type} = component;
-  switch (type) {
-    case 'Transform': {
-      // console.log('got transform', component);
-      const {m_LocalPosition, m_LocalRotation, m_LocalScale} = component;
+const _parseComponents = cs => {
+  const result = {};
 
-      const position = [m_LocalPosition.x, m_LocalPosition.true, m_LocalPosition.z];
-      const quaternion = [m_LocalRotation.x, m_LocalRotation.true, m_LocalRotation.z, m_LocalRotation.w];
-      const scale = [m_LocalScale.x, m_LocalScale.true, m_LocalScale.z];
-      return {
-        type: 'transform',
-        position,
-        quaternion,
-        scale,
-      };
-    }
-    case 'MeshRenderer': {
-      const {m_Materials} = component;
-      const materials = m_Materials.map(m => _getMaterial(m));
-      /* const gameObject = scene.find(o => o.fileID === component.m_GameObject.fileID);
-      const components = gameObject.m_Component.map(c => {
-        if (c.component.fileID !== fileID) {
-          return _parseComponent(c);
-        } else {
-          return null;
+  for (const c of cs) {
+    const {fileID} = c;
+    const component = scene.find(o => o.fileID === fileID);
+    const {type} = component;
+    switch (type) {
+      case 'Transform': {
+        // console.log('got transform', component);
+        const {m_LocalPosition, m_LocalRotation, m_LocalScale} = component;
+
+        if (result.position) {
+          throw new Error('dupe');
         }
-      }).filter(c => c !== null); */
-      console.log('got mesh renderer', component, materials);
-      // throw 'lol';
-      return null; // XXX
-    }
-    case 'SkinnedMeshRenderer': {
-      const {m_Mesh, m_Materials} = component;
-      const mesh = _getMesh(m_Mesh.guid);
-      const materials = m_Materials.map(m => _getMaterial(m));
-      // console.log('got mat', JSON.stringify(materials, null, 2));
-      // m_Mesh.fileID
-      /* m_Mesh: {
-        fileID: 4300000,
-        guid: 'f496d0e3752a95b3443d084ce449ae6f',
-        type: 2
-      } */
-      /* m_Materials: [
-        {
-          fileID: 2100000,
-          guid: '137d5d2e7d273eb2471a663eaec44006',
-          type: 2
-        }
-      ] */
-      return {
-        type: 'mesh',
-        geometry: mesh,
-        material: materials,
-      };
-    }
-    case 'MeshFilter': {
-      const {m_Mesh, m_Materials} = component;
-      const mesh = _getMesh(m_Mesh.guid);
-      console.log('got mesh', component);
-      return null; // XXX
-    }
-    default: {
-      console.warn('unknown component', type);
-      if (type === 'MeshFilter') {
-        console.warn('got component', component);
+        result.position = [m_LocalPosition.x, m_LocalPosition.true, m_LocalPosition.z];
+        result.quaternion = [m_LocalRotation.x, m_LocalRotation.true, m_LocalRotation.z, m_LocalRotation.w];
+        result.scale = [m_LocalScale.x, m_LocalScale.true, m_LocalScale.z];
+        break;
       }
-      return null;
+      case 'MeshRenderer': {
+        const {m_Materials} = component;
+        const materials = m_Materials.map(m => _getMaterial(m));
+        /* const gameObject = scene.find(o => o.fileID === component.m_GameObject.fileID);
+        const components = gameObject.m_Component.map(c => {
+          if (c.component.fileID !== fileID) {
+            return _parseComponent(c);
+          } else {
+            return null;
+          }
+        }).filter(c => c !== null); */
+        if (result.materials) {
+          throw new Error('dupe');
+        }
+        result.materials = materials;
+        break;
+      }
+      case 'SkinnedMeshRenderer': {
+        const {m_Mesh, m_Materials} = component;
+        const mesh = _getMesh(m_Mesh.guid);
+        const materials = m_Materials.map(m => _getMaterial(m));
+
+        const meshFilePath = fileMap[m_Mesh.guid];
+        const mesh2 = YAML.parse(fs.readFileSync(meshFilePath, 'utf8'));
+
+        console.log('got mat', mesh2.Mesh.m_Name, JSON.stringify(m_Materials.map(m => {
+          const matFilePath = fileMap[m.guid];
+          const matFile = YAML.parse(fs.readFileSync(matFilePath, 'utf8'));
+          return matFile;
+        }), null, 2), JSON.stringify(materials, null, 2));
+        // m_Mesh.fileID
+        /* m_Mesh: {
+          fileID: 4300000,
+          guid: 'f496d0e3752a95b3443d084ce449ae6f',
+          type: 2
+        } */
+        /* m_Materials: [
+          {
+            fileID: 2100000,
+            guid: '137d5d2e7d273eb2471a663eaec44006',
+            type: 2
+          }
+        ] */
+        if (result.geometry || result.materials) {
+          throw new Error('dupe');
+        }
+        result.geometry = mesh;
+        result.materials = materials;
+        break;
+      }
+      case 'MeshFilter': {
+        const {m_Mesh, m_Materials} = component;
+        const mesh = _getMesh(m_Mesh.guid);
+        if (result.geometry) {
+          throw new Error('dupe');
+        }
+        result.geometry = mesh;
+        break;
+      }
+      default: {
+        // console.warn('unknown component', type);
+        break;
+      }
     }
   }
+  
+  return result;
 };
 
 scene = scene.map(o => {
@@ -349,20 +372,19 @@ scene = scene.map(o => {
     })); */
 
     const componentSpecs = _collectComponents(o);
-    const components = componentSpecs.map(cs => _parseComponent(cs)).filter(c => c !== null);
-    // const components = o.m_Component.map(c => _parseComponent(c)).filter(c => c !== null);
+    const object = _parseComponents(componentSpecs);
 
     return {
       name,
-      components,
+      ...object,
     };
   } else {
     return null;
   }
 }).filter(o => o !== null);
 
-const avatar = scene.find(o => o.name === 'Avator_voxelkei');
-fs.writeFileSync('output.json', JSON.stringify(avatar, null, 2));
+const avatars = scene.filter(o => o.name === 'Avator_voxelkei');
+fs.writeFileSync('output.json', JSON.stringify(avatars, null, 2));
 
 /* console.log("Done!");
 
