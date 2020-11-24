@@ -148,16 +148,23 @@ const _getMesh = guid => {
         return sign * mantissa * Math.pow(2, exponent);
       }
       
-      function hex2halffloat(num) { // XXX
-        let sign = (num & 0x80000000) ? -1 : 1;
-        let exponent = ((num >> 23) & 0xff) - 127;
-        let mantissa = 1 + ((num & 0x7fffff) / 0x7fffff);
-        return sign * mantissa * Math.pow(2, exponent);
+      function hex2halffloat(binary) {
+          var exponent = (binary & 0x7C00) >> 10,
+              fraction = binary & 0x03FF;
+          return (binary >> 15 ? -1 : 1) * (
+              exponent ?
+              (
+                  exponent === 0x1F ?
+                  fraction ? NaN : Infinity :
+                  Math.pow(2, exponent - 15) * (1 + fraction / 0x400)
+              ) :
+              6.103515625e-5 * (fraction / 0x400)
+          );
       }
 
       function swap16(val) {
         return ((val & 0xFF) << 8) | ((val >> 8) & 0xFF);
-      };
+      }
 
       function swap32(val) {
         return (
@@ -166,18 +173,23 @@ const _getMesh = guid => {
           ((val >> 8) & 0xff00) |
           ((val >> 24) & 0xff)
         );
-      };
+      }
 
       // process `_typelessdata` field
       /* const vertices = [];
       const normals = [];
       const tangents = [];
       const uvs = []; */
-      const slices = [];
+      /* const slices = [];
       for (let ii = 0; ii < mesh.length / 8; ++ii) {
-        let slice = parseFloat(hex2float(swap32(parseInt(`0x` + mesh.substr(ii * 8, 8)))).toFixed(4));
+        let slice = parseFloat(hex2float(swap32(parseInt(`0x` + mesh.substr(ii * 8, 8)))).toFixed(8));
         slices.push(slice);
-      };
+      }
+      const halfSlices = [];
+      for (let ii = 0; ii < mesh.length / 4; ++ii) {
+        let slice = parseFloat(hex2halffloat(swap16(parseInt(`0x` + mesh.substr(ii * 4, 4)))).toFixed(8));
+        halfSlices.push(slice);
+      } */
       const buffers = [];
       for (const stream of streams) {
         const streamBuffer = [];
@@ -191,6 +203,10 @@ const _getMesh = guid => {
       delete o.Mesh.m_IndexBuffer;
       console.log('got streams', JSON.stringify(o.Mesh.m_VertexData, null, 2)); */
       
+      const uint8Array = new Uint8Array(4);
+      const uint32Array = new Uint32Array(uint8Array.buffer);
+      const uint16Array = new Uint16Array(uint8Array.buffer);
+      let f;
       let offset = 0;
       for (let streamIndex = 0; streamIndex < streams.length; streamIndex++) {
         const stream = streams[streamIndex];
@@ -199,7 +215,28 @@ const _getMesh = guid => {
           for (let slotIndex = 0; slotIndex < stream.length; slotIndex++) {
             const slot = stream[slotIndex];
             for (let k = 0; k < slot.dimension; k++) {
-              buffers[streamIndex][slotIndex].push(slices[offset++]);
+              switch (slot.format) {
+                case 0: {
+                  uint8Array.fill(0);
+                  uint8Array.set(Buffer.from(mesh.slice(offset, offset + 8), 'hex')); f = hex2float(uint32Array[0]);
+                  // f = hex2float(uint32Array[0]);
+                  buffers[streamIndex][slotIndex].push(f);
+                  offset += 8;
+                  break;
+                }
+                case 1: {
+                  uint8Array.fill(0);
+                  uint8Array.set(Buffer.from(mesh.slice(offset, offset + 4), 'hex')); f = hex2float(uint16Array[0]);
+                  // f = hex2float(uint16Array[0]);
+                  buffers[streamIndex][slotIndex].push(f);
+                  offset += 4;
+                  break;
+                }
+                default: {
+                  throw new Error('unknown format');
+                  break;
+                }
+              }
             }
           }
         }
@@ -231,7 +268,7 @@ const _getMesh = guid => {
       const indices = [];
       for (let ii = 0; ii < index.length / 4; ++ii) {
         indices.push(swap16(parseInt(`0x` + index.substr(ii * 4, 4))));
-      };
+      }
 
       entry = {
         vertices,
