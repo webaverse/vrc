@@ -92,6 +92,9 @@ scene.add(cubeMesh);
       materials.find(material => material.materialId === t.object.materials[0]),
     ) : new THREE.Object3D();
     result.position.fromArray(t.position);
+    if (t.object) {
+      result.name = t.object.name;
+    }
     result.quaternion.fromArray(t.quaternion);
     result.scale.fromArray(t.scale);
     for (const child of t.children) {
