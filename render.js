@@ -7,13 +7,13 @@ const canvas = document.getElementById('canvas');
 const context = canvas.getContext('webgl2', {
   antialias: true,
   alpha: true,
-  preserveDrawingBuffer: false,
+  // preserveDrawingBuffer: false,
 });
 const renderer = new THREE.WebGLRenderer({
   canvas,
   context,
   antialias: true,
-  alpha: true,
+  // alpha: true,
   // preserveDrawingBuffer: false,
 });
 renderer.setSize(window.innerWidth, window.innerHeight);
