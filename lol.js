@@ -243,7 +243,6 @@ const _getMesh = guid => {
       meshCache[guid] = entry;
     } else {
       entry = null;
-      meshCache[guid] = entry;
     }
   }
   return entry ? guid : null;
