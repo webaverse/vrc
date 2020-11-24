@@ -46,6 +46,8 @@ fs.writeFileSync('file-map.json', JSON.stringify(fileMap, null, 2));
 
 // fs.writeFileSync('temp.json', JSON.stringify(scene, null, 2));
 
+const transformCache = {};
+const transformRoots = [];
 const _getTransform = c => {
   const {fileID} = c;
   let entry = transformCache[fileID];
