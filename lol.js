@@ -256,7 +256,7 @@ const _getMaterial = m => {
     const matFile = YAML.parse(fs.readFileSync(matFilePath, 'utf8'));
     console.log('got material', JSON.stringify(matFile, null, 2));
     const textures = matFile.Material.m_SavedProperties.m_TexEnvs.map(o => {
-      const k = Object.keys(o);
+      const k = Object.keys(o)[0];
       o = o[k];
       const {m_Texture} = o;
       if (m_Texture.guid) {
@@ -273,11 +273,15 @@ const _getMaterial = m => {
         return null;
       }
     }).filter(t => t !== null);
-    entry = {
-      name: matFile.Material.m_Name,
-      textures,
-    };
-    materialCache[m.guid] = entry;
+    if (textures.length > 0) {
+      entry = {
+        name: matFile.Material.m_Name,
+        textures,
+      };
+      materialCache[m.guid] = entry;
+    } else {
+      entry = null;
+    }
   }
   return entry ? m.guid : null;
 };
@@ -326,7 +330,7 @@ const _parseComponents = (name, cs) => {
       case 'MeshRenderer': {
         const {m_Materials} = component;
         // console.log('got materials', JSON.stringify(m_Materials, null, 2));
-        const materials = m_Materials.map(m => _getMaterial(m));
+        const materials = m_Materials.map(m => _getMaterial(m)).filter(m => m !== null);
         /* const gameObject = scene.find(o => o.fileID === component.m_GameObject.fileID);
         const components = gameObject.m_Component.map(c => {
           if (c.component.fileID !== fileID) {
@@ -335,21 +339,27 @@ const _parseComponents = (name, cs) => {
             return null;
           }
         }).filter(c => c !== null); */
-        if (result.materials) {
-          throw new Error('dupe');
+        if (materials.length > 0) {
+          if (result.materials) {
+            throw new Error('dupe');
+          }
+          result.materials = materials;
         }
-        result.materials = materials;
         break;
       }
       case 'SkinnedMeshRenderer': {
         const {m_Mesh, m_Materials} = component;
         // console.log('got materials', JSON.stringify(m_Materials, null, 2));
-        const mesh = _getMesh(m_Mesh.guid);
-        const materials = m_Materials.map(m => _getMaterial(m));
+        const materials = m_Materials.map(m => _getMaterial(m)).filter(m => m !== null);
+        if (materials.length > 0) {
+          if (result.materials) {
+            throw new Error('dupe');
+          }
+          result.materials = materials;
+        }
 
-        const meshFilePath = fileMap[m_Mesh.guid];
-        const mesh2 = YAML.parse(fs.readFileSync(meshFilePath, 'utf8'));
-
+        // const meshFilePath = fileMap[m_Mesh.guid];
+        // const mesh2 = YAML.parse(fs.readFileSync(meshFilePath, 'utf8'));
         /* console.log('got mat', mesh2.Mesh.m_Name, JSON.stringify(m_Materials.map(m => {
           const matFilePath = fileMap[m.guid];
           const matFile = YAML.parse(fs.readFileSync(matFilePath, 'utf8'));
@@ -368,11 +378,11 @@ const _parseComponents = (name, cs) => {
             type: 2
           }
         ] */
-        if (result.geometry || result.materials) {
+        const mesh = _getMesh(m_Mesh.guid);
+        if (result.geometry) {
           throw new Error('dupe');
         }
         result.geometry = mesh;
-        result.materials = materials;
         break;
       }
       case 'MeshFilter': {
@@ -434,7 +444,7 @@ transformRoots = _recurse(transformRoots);
 fs.writeFileSync('output.json', JSON.stringify({
   transforms: transformRoots,
   // objects: scene,
-  meshes: meshCache,
+  geometries: meshCache,
   materials: materialCache,
 }, null, 2));
 
