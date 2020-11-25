@@ -4,7 +4,7 @@ import {OrbitControls} from './OrbitControls.js';
 import {DDSLoader} from './DDSLoader.js';
 import './webgl-texture-util.js';
 
-// find Assets/Texture2D/ -name *.crn | xargs crunch/bin/crunch.exe -file
+// find Assets/Texture2D/ -name *.crn | xargs crunch/bin/crunch.exe -fileformat png -split -file
 
 const canvas = document.getElementById('canvas');
 const context = canvas.getContext('webgl2', {
