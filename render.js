@@ -58,7 +58,7 @@ const cubeMesh = new THREE.Mesh(new THREE.BoxBufferGeometry(1, 1, 1), new THREE.
 cubeMesh.position.z = -1;
 scene.add(cubeMesh);
 
-const sceneScale = 10;
+// const sceneScale = 10;
 
 (async () => {
   const res = await fetch('./output.json');
@@ -101,9 +101,9 @@ const sceneScale = 10;
     if (t.object) {
       result.name = t.object.name;
     }
-    result.position.fromArray(t.position).divideScalar(sceneScale);
+    result.position.fromArray(t.position)// .divideScalar(sceneScale);
     result.quaternion.fromArray(t.quaternion);
-    result.scale.fromArray(t.scale).multiplyScalar(sceneScale);
+    result.scale.fromArray(t.scale)// .multiplyScalar(sceneScale);
     for (const child of t.children) {
       const childResult = _parseTransform(child);
       result.add(childResult);

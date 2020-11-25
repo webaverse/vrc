@@ -82,7 +82,7 @@ const _getMesh = guid => {
     if (meshFilePath) {
       const o = YAML.parse(fs.readFileSync(meshFilePath, 'utf8'));
       
-      console.log('got mesh', o.Mesh.m_Name);
+      // console.log('got mesh', o.Mesh.m_Name);
       
       // input example: A simple Quad
 
@@ -105,7 +105,7 @@ const _getMesh = guid => {
       const index = normalizeString(typeof o.Mesh.m_IndexBuffer === 'string' ? o.Mesh.m_IndexBuffer : padTo4(o.Mesh.m_IndexBuffer));
       const channels = o.Mesh.m_VertexData.m_Channels;
       const numVertices = o.Mesh.m_VertexData.m_VertexCount;
-      const streams = [];
+      let streams = [];
       for (const channel of channels) {
         const {stream, offset, format, dimension} = channel;
         if (dimension === 0) {
@@ -190,7 +190,7 @@ const _getMesh = guid => {
         let slice = parseFloat(hex2halffloat(swap16(parseInt(`0x` + mesh.substr(ii * 4, 4)))).toFixed(8));
         halfSlices.push(slice);
       } */
-      const buffers = [];
+      let buffers = [];
       for (const stream of streams) {
         const streamBuffer = [];
         for (let i = 0; i < stream.length; i++) {
@@ -262,12 +262,23 @@ const _getMesh = guid => {
         tangents.push(t0, t1, t2, t3);
       }; */
 
-      const [vertices, normals, tangents, uvs] = buffers.flat();
+      streams = streams.flat();
+      buffers = buffers.flat();
+      streams.forEach((stream, i) => {
+        stream.buffer = buffers[i];
+      });
+      const [uvs, vertices, normals, tangents] = streams.sort((a, b) => a.dimension - b.dimension).map(s => s.buffer);
+      // console.log('buffers', streams.map(s => s.dimension));
 
       // process `m_IndexBuffer` field
       const indices = [];
       for (let ii = 0; ii < index.length / 4; ++ii) {
         indices.push(swap16(parseInt(`0x` + index.substr(ii * 4, 4))));
+      }
+      
+      if (guid === '6dffc0af7a08418e429f496f5d5c123d') {
+        console.log('streams', streams);
+        throw 'lol';
       }
 
       entry = {
