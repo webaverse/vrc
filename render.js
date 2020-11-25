@@ -2,6 +2,7 @@ import * as THREE from './three.module.js';
 import {OrbitControls} from './OrbitControls.js';
 // import {CSS3DRenderer} from './CSS3DRenderer.js';
 import {DDSLoader} from './DDSLoader.js';
+import './webgl-texture-util.js';
 
 // find Assets/Texture2D/ -name *.crn | xargs crunch/bin/crunch.exe -file
 
@@ -24,6 +25,38 @@ renderer.setPixelRatio(window.devicePixelRatio);
 renderer.sortObjects = false;
 // renderer.physicallyCorrectLights = true;
 // renderer.xr.enabled = true;
+
+const _loadCrnTexture = u => {
+  const forceTextureInitialization = function() {
+    const material = new THREE.MeshBasicMaterial();
+    const geometry = new THREE.PlaneBufferGeometry();
+    const scene = new THREE.Scene();
+    scene.add(new THREE.Mesh(geometry, material));
+    const camera = new THREE.Camera();
+
+    return function forceTextureInitialization(texture) {
+      material.map = texture;
+      renderer.render(scene, camera);
+    };
+  }();
+  
+  const texture = new THREE.Texture();
+
+  const util = new WebGLTextureUtil(renderer.getContext());
+  const gl = renderer.getContext();
+  const glTex = gl.createTexture();
+  util.loadTexture(u, glTex, function() {
+    // console.log('loaded texture', Array.from(arguments));
+
+    forceTextureInitialization(texture);
+    const texProps = renderer.properties.get(texture);
+    texProps.__webglTexture = glTex;
+    
+    // accept(texture);
+  });
+  
+  return texture;
+};
 
 const scene = new THREE.Scene();
 
