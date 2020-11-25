@@ -218,17 +218,26 @@ const _getMesh = guid => {
               switch (slot.format) {
                 case 0: {
                   uint8Array.fill(0);
-                  uint8Array.set(Buffer.from(mesh.slice(offset, offset + 8), 'hex')); f = hex2float(uint32Array[0]);
-                  // f = hex2float(uint32Array[0]);
+                  uint8Array.set(Buffer.from(mesh.slice(offset, offset + 8), 'hex'));
+                  f = hex2float(uint32Array[0]);
                   buffers[streamIndex][slotIndex].push(f);
                   offset += 8;
                   break;
                 }
                 case 1: {
                   uint8Array.fill(0);
-                  uint8Array.set(Buffer.from(mesh.slice(offset, offset + 4), 'hex')); f = hex2float(uint16Array[0]);
-                  // f = hex2float(uint16Array[0]);
+                  uint8Array.set(Buffer.from(mesh.slice(offset, offset + 4), 'hex'));
+
+                  /* const a = uint8Array[0];
+                  uint8Array[0] = uint8Array[1];
+                  uint8Array[1] = a; */
+                  f = hex2halffloat(uint16Array[0]);
                   buffers[streamIndex][slotIndex].push(f);
+                  
+                  if (guid === '6dffc0af7a08418e429f496f5d5c123d' && j === 0 && k === 0) {
+                    console.log('uvs', [uint8Array[0], uint8Array[1], uint16Array[0], f, mesh.slice(offset, offset + 4), f]);
+                  }
+                  
                   offset += 4;
                   break;
                 }
@@ -276,10 +285,11 @@ const _getMesh = guid => {
         indices.push(swap16(parseInt(`0x` + index.substr(ii * 4, 4))));
       }
       
-      if (guid === '6dffc0af7a08418e429f496f5d5c123d') {
-        console.log('streams', streams);
+      /* if (guid === '6dffc0af7a08418e429f496f5d5c123d') {
+        console.log('streams', uvs[0], streams);
+        fs.writeFileSync('lol2.json', JSON.stringify(o.Mesh.m_VertexData, null, 2));
         throw 'lol';
-      }
+      } */
 
       entry = {
         vertices,
