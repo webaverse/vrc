@@ -107,6 +107,7 @@ scene.add(cubeMesh);
     const texture = textures[0];
 
     const texturePath = texture.path;
+    // const dxt5Texture = _loadCrnTexture(texturePath);
     const dxt5Texture = new DDSLoader().load(texturePath.replace(/\.crn$/, '.dds'));
     const m = new THREE.MeshBasicMaterial({
       // color: 0x000080,
